@@ -41,6 +41,10 @@ public final class Results {
   private final Histogram<TransactionType> retryDifferent = new Histogram<>(false);
   private final Map<TransactionType, Histogram<String>> abortMessages = new HashMap<>();
 
+  public static void startPerfCounters() {
+    System.out.println("\n\n\n\n\nStarting perf counters\n\n\n\n");
+  }
+
   public Results(
       State state,
       long startTimestampMs,
