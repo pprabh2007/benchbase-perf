@@ -20,6 +20,7 @@ package com.oltpbenchmark;
 import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.types.State;
+import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.Histogram;
 import java.util.HashMap;
 import java.util.List;
@@ -40,9 +41,31 @@ public final class Results {
   private final Histogram<TransactionType> error = new Histogram<>(false);
   private final Histogram<TransactionType> retryDifferent = new Histogram<>(false);
   private final Map<TransactionType, Histogram<String>> abortMessages = new HashMap<>();
+  public String baseFileName;
 
-  public static void startPerfCounters() {
-    System.out.println("\n\n\n\n\nStarting perf counters\n\n\n\n");
+  public static void startPerfCounters(String baseFileName) {
+    String outputDirectory = "perfResults";
+    FileUtil.makeDirIfNotExists(outputDirectory);
+
+    String perfStatOutput = outputDirectory + "/" + baseFileName + ".perf.stat.txt";
+    String perfRecordOutput = outputDirectory + "/" + baseFileName + ".perf.record.txt";
+
+    String[] command1 = {"sudo", "perf", "stat", "-a", "-o", perfStatOutput, "--", "sleep", "30"};
+    String[] command2 = {
+      "sudo", "perf", "sched", "record", "-a", "-o", perfRecordOutput, "--", "sleep", "30"
+    };
+
+    // Create ProcessBuilder for both commands
+    ProcessBuilder process1 = new ProcessBuilder(command1);
+    ProcessBuilder process2 = new ProcessBuilder(command2);
+
+    // Start both processes concurrently
+    try {
+      Process proc1 = process1.start();
+      Process proc2 = process2.start();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   public Results(

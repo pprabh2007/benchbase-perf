@@ -24,8 +24,11 @@ import com.oltpbenchmark.api.collectors.monitoring.MonitorGen;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.MonitorInfo;
 import com.oltpbenchmark.util.StringUtil;
+import com.oltpbenchmark.util.TimeUtil;
 import java.util.*;
+import org.apache.commons.cli.*;
 import org.apache.commons.collections4.map.ListOrderedMap;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +61,10 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   public static Results runRateLimitedBenchmark(
       List<Worker<? extends BenchmarkModule>> workers,
       List<WorkloadConfiguration> workConfs,
-      MonitorInfo monitorInfo) {
+      MonitorInfo monitorInfo,
+      CommandLine argsLine) {
     ThreadBench bench = new ThreadBench(workers, workConfs, monitorInfo);
-    return bench.runRateLimitedMultiPhase();
+    return bench.runRateLimitedMultiPhase(argsLine);
   }
 
   private void createWorkerThreads() {
@@ -109,7 +113,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     return requests;
   }
 
-  private Results runRateLimitedMultiPhase() {
+  private Results runRateLimitedMultiPhase(CommandLine argsLine) {
     boolean errorsThrown = false;
     List<WorkloadState> workStates = new ArrayList<>();
 
@@ -171,6 +175,9 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
     // Allow workers to start work.
     testState.blockForStart();
+
+    String name = StringUtils.join(StringUtils.split(argsLine.getOptionValue("b"), ','), '-');
+    String baseFileName = name + "_" + TimeUtil.getCurrentTimeString();
 
     // Main Loop
     while (true) {
@@ -293,7 +300,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         }
         start = now;
         LOG.info("{} :: Warmup complete, starting measurements.", StringUtil.bold("MEASURE"));
-        Results.startPerfCounters();
+        Results.startPerfCounters(baseFileName);
         // measureEnd = measureStart + measureSeconds * 1000000000L;
 
         // For serial executions, we want to do every query exactly
@@ -351,7 +358,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
               requests,
               stats,
               samples);
-
+      results.baseFileName = baseFileName;
       // Compute transaction histogram
       Set<TransactionType> txnTypes = new HashSet<>();
       for (WorkloadConfiguration workConf : workConfs) {

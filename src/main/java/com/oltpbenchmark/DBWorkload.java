@@ -39,7 +39,6 @@ import org.apache.commons.configuration2.convert.DisabledListDelimiterHandler;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.apache.commons.configuration2.tree.xpath.XPathExpressionEngine;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -556,8 +555,8 @@ public class DBWorkload {
     if (isBooleanOptionSet(argsLine, "execute")) {
       // Bombs away!
       try {
-        Results r = runWorkload(benchList, monitorInfo);
-        writeOutputs(r, activeTXTypes, argsLine, xmlConfig);
+        Results r = runWorkload(benchList, monitorInfo, argsLine);
+        writeOutputs(r, activeTXTypes, argsLine, xmlConfig, r.baseFileName);
         writeHistograms(r);
 
         if (argsLine.hasOption("json-histograms")) {
@@ -691,7 +690,8 @@ public class DBWorkload {
       Results r,
       List<TransactionType> activeTXTypes,
       CommandLine argsLine,
-      XMLConfiguration xmlConfig)
+      XMLConfiguration xmlConfig,
+      String baseFileName)
       throws Exception {
 
     // If an output directory is used, store the information
@@ -703,10 +703,6 @@ public class DBWorkload {
 
     FileUtil.makeDirIfNotExists(outputDirectory);
     ResultWriter rw = new ResultWriter(r, xmlConfig, argsLine);
-
-    String name = StringUtils.join(StringUtils.split(argsLine.getOptionValue("b"), ','), '-');
-
-    String baseFileName = name + "_" + TimeUtil.getCurrentTimeString();
 
     int windowSize = Integer.parseInt(argsLine.getOptionValue("s", "5"));
 
@@ -773,7 +769,8 @@ public class DBWorkload {
     bench.loadDatabase();
   }
 
-  private static Results runWorkload(List<BenchmarkModule> benchList, MonitorInfo monitorInfo)
+  private static Results runWorkload(
+      List<BenchmarkModule> benchList, MonitorInfo monitorInfo, CommandLine argsLine)
       throws IOException {
     List<Worker<?>> workers = new ArrayList<>();
     List<WorkloadConfiguration> workConfs = new ArrayList<>();
@@ -788,7 +785,7 @@ public class DBWorkload {
               bench.getBenchmarkName().toUpperCase(), num_phases, (num_phases > 1 ? "s" : "")));
       workConfs.add(bench.getWorkloadConfiguration());
     }
-    Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, monitorInfo);
+    Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, monitorInfo, argsLine);
     LOG.info(SINGLE_LINE);
     LOG.info("Rate limited reqs/s: {}", r);
     return r;
